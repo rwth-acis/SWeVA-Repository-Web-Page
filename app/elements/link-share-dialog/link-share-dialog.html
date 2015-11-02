@@ -1,0 +1,45 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+
+<dom-module id="link-share-dialog">
+    <template>
+        <style>
+            paper-dialog {
+                background: #fff;
+            }
+        </style>
+        <paper-dialog>
+            <h2>{{title}}</h2>
+            <paper-input label="Copy to clipboard" readonly value=" "></paper-input>
+            <div class="buttons">
+                <paper-button dialog-dismiss>Close</paper-button>
+            </div>
+        </paper-dialog>
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'link-share-dialog',
+                properties: {
+                    title: {
+                        type: String,
+                        value: 'title'
+                    }
+                },
+                ready: function () {
+
+                },
+                open: function (link) {
+                    var dialog = this.getElementsByTagName('paper-dialog')[0];
+                    var input = this.getElementsByTagName('paper-input')[0].$.input;
+                    dialog.open();
+                    input.value = link;
+                    window.setTimeout(function () { input.focus(); input.select() }, 100);
+                }
+            });
+        })();
+    </script>
+</dom-module>

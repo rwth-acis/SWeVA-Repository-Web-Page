@@ -1,0 +1,46 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../wrappers/SparkMD5.html">
+<dom-module id="user-gravatar">
+    <template>
+        <style>
+            .img-circle {
+                border-radius: 50%;
+            }
+        </style>
+        <image class="img-circle" src$={{gid}}"></image>
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'user-gravatar',
+                properties: {
+                    email: {
+                        type: String,
+                        value: 'a',
+                        observer: 'ready'
+                    },
+                    gid: {
+                        type: String,                        
+                        value: 'a',
+                        notify: true
+                    },
+                    size: {
+                        type: Number,
+                        value: 25
+                    }
+                },
+               
+                ready: function () {
+                    if (this.email) {
+                       
+                        this.gid = "https://secure.gravatar.com/avatar/" + SparkMD5.hash(this.email) + "?s=" + this.size + "&d=identicon";
+                        var image = this.querySelector('.img-circle');
+                        image.src = this.gid;//somehow binding does not work
+                    }
+                }
+            });
+        })();
+    </script>
+</dom-module>

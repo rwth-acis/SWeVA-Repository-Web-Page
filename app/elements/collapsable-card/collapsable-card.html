@@ -1,0 +1,136 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/iron-collapse/iron-collapse.html">
+<link rel="import" href="../../bower_components/iron-icons/iron-icons.html">
+
+<dom-module id="collapsable-card">
+    <template>
+        <style>
+            .overview-card {
+                width: 100%;
+                flex: 1 1 auto;
+                margin-bottom: 20px;
+                margin-left: 10px;
+                margin-right: 10px;
+                position: relative;
+            }
+
+                .overview-card paper-button {
+                    font-weight: 500;
+                    color: var(--accent-color);
+                }
+
+                .overview-card .collapsable {
+                    position: relative;
+                }
+
+                    .overview-card .collapsable > paper-button {
+                        position: absolute;
+                        top: -50px;
+                        right: 15px;
+                        /*color: var(--text-primary-color);
+                    background-color: var(--accent-color);*/
+                    }
+
+            .card-content {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .inner-container {
+                padding-left: 22px;
+                padding-right: 22px;
+                flex: 1 1;
+                min-width: 200px;
+                margin-bottom: 20px;
+            }
+
+            .flexbox {
+                display: flex;
+                flex: 1 1;
+            }
+        </style>
+
+        <paper-card class="overview-card" heading="{{title}}">
+            <div class="collapsable">
+                <paper-button icon="icons:expand-more" on-click="toggle">
+                    <iron-icon icon$="{{_getToggleArrow(isOpen)}}">
+                    </iron-icon>
+                    <span>{{_getToggleText(isOpen)}}</span>
+                </paper-button>
+                <iron-collapse id="collapse-inner">
+                    <div class="card-content flexbox">
+                        <div class="inner-container">
+                            <content>
+                            </content>
+                        </div>
+                    </div>
+                </iron-collapse>
+            </div>
+        </paper-card>
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'collapsable-card',
+                properties: {
+                    title: {
+                        type: String,
+                        value: 'title'
+                    },
+                    isOpen: {
+                        type: Boolean,
+                        value: false
+                    }
+                },
+                ready: function () {
+
+                },
+
+                toggle: function () {
+
+                    this.querySelector('#collapse-inner').toggle();
+                    this.isOpen = !this.isOpen;
+                    
+                    if (this.isOpen) {
+                        var element = this.querySelector('.overview-card');
+                        var posY = element.offsetTop;
+                        this._scrollSmoothly(posY, 30, 15);
+
+                    }
+                },
+                _getToggleText: function () {
+                    return this.isOpen ? ' COLLAPSE' : ' EXPAND';
+                },
+                _getToggleArrow: function () {
+                    return this.isOpen ? 'icons:expand-less' : 'icons:expand-more';
+                },
+                _scrollSmoothly: function (target, pixels, interval) {
+                    var element = document.getElementById('mainContainer');
+                    var start = element.scrollTop;                    
+                    if (target == start) {
+                        return;
+                    }
+                    var positive = target >= start;
+                    var hops = (target - start) / pixels;
+                    if (!positive) {
+                        hops = -hops;
+                    }
+
+                    for (var i = 1; i <= hops; i++) {
+                        (function () {
+                            var hop_top_position = pixels * i;
+                            window.setTimeout(function () { element.scrollTop= hop_top_position + start; }, interval * i);
+                        })();
+                    }
+
+
+                    
+                }
+            });
+        })();
+    </script>
+</dom-module>

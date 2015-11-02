@@ -1,0 +1,459 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../../bower_components/paper-material/paper-material.html">
+
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../../bower_components/paper-input/paper-textarea.html">
+
+
+<link rel="import" href="../../bower_components/iron-collapse/iron-collapse.html">
+<link rel="import" href="../../bower_components/marked-element/marked-element.html">
+<link rel="import" href="../../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+
+<link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
+
+<dom-module id="sweva-upload">
+    <template>
+        <style>
+            #upload-container {
+                padding: 30px;
+            }
+
+            paper-material {
+                border-radius: 2px;
+                height: 100%;
+                padding: 16px 0 16px 0;
+                width: calc(98.66% - 16px);
+                margin: 16px auto;
+                background: white;
+            }
+
+            .text-content {
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+
+            .vertical-space {
+                display: block;
+                height: 50px;
+            }
+
+            paper-button[raised].colorful {
+                background: var(--accent-color);
+                color: var(--text-primary-color);
+            }
+
+            paper-button[raised].colorful2 {
+                background: var(--default-primary-color);
+                color: var(--text-primary-color);
+            }
+
+            paper-button[raised] {
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }
+
+            img {
+                display: block;
+            }
+
+            input[type=file] {
+                display: block;
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }
+
+            paper-dialog {
+                background: #fff;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            @media (max-width: 600px) {
+                paper-material {
+                    --menu-container-display: none;
+                    width: calc(97.33% - 32px);
+                    padding-left: 16px;
+                    padding-right: 16px;
+                }
+            }
+
+            @media (min-width: 601px) {
+
+                paper-material {
+                    width: calc(98% - 46px);
+                    margin-bottom: 32px;
+                    padding-left: 30px;
+                    padding-right: 30px;
+                }
+            }
+        </style>
+
+        <iron-ajax id="upload-post-ajax"
+                   url="{{ajaxUploadUrl}}"
+                   handle-as="text"
+                   content-type="application/json"
+                   method="POST"
+                   body="{{uploadString}}"
+                   on-response="_handleUploadPostResponse"
+                   debounce-duration="300"></iron-ajax>
+
+        <iron-ajax id="edit-get-ajax"
+                   url="{{ajaxCallUrl}}"
+                   handle-as="json"
+                   on-response="_handleEditGetResponse"
+                   debounce-duration="300"></iron-ajax>
+
+        <iron-ajax id="edit-put-ajax"
+                   url="{{ajaxCallUrl}}"
+                   handle-as="text"
+                   content-type="application/json"
+                   method="PUT"
+                   body="{{uploadString}}"
+                   on-response="_handleUploadPostResponse"
+                   debounce-duration="300"></iron-ajax>
+
+
+        <paper-dialog id="uploaded-dialog">
+            <template is="dom-if" if="{{isEdit}}">
+                <h2>Successfully edited!</h2>
+            </template>
+            <template is="dom-if" if="{{!isEdit}}">
+                <h2>Successfully uploaded!</h2>
+            </template>            
+            <div class="buttons">
+                <paper-button dialog-confirm autofocus>OK</paper-button>
+            </div>
+        </paper-dialog>
+        <div id="upload-container">
+
+            <paper-material elevation="1">
+                <div class="text-content">
+                    <template is="dom-if" if="{{isEdit}}">
+                        <h1>Editing <span>{{name}}</span></h1>
+                    </template>
+                    <template is="dom-if" if="{{!isEdit}}">
+                        <h1>Upload</h1>
+                    </template>
+                    <paper-dropdown-menu hidden="{{isEdit}}" label="Category">
+                        <paper-menu id="category" class="dropdown-content" selected="0">
+                            <template is="dom-repeat" items="[[categories]]">
+                                <paper-item>[[item.title]]</paper-item>
+                            </template>
+                        </paper-menu>
+                    </paper-dropdown-menu>
+                    <paper-input id="name" hidden="{{isEdit}}" label="Name" required auto-validate pattern="[a-zA-Z0-9\-_]+" error-message="You need a name! (letters, numbers, - and _)"></paper-input>
+                    <paper-input id="title" label="Title" required auto-validate error-message="You need a title!"></paper-input>
+                    <paper-textarea id="short-description" label="Short description" required auto-validate error-message="You need a short description!"></paper-textarea>
+                    <paper-textarea id="description" label="Description" required auto-validate error-message="You need a description!"></paper-textarea>
+                    <paper-textarea id="tags" label="Tags separated with ," required auto-validate error-message="You need at least one tag!"></paper-textarea>
+                    <div class="vertical-space"></div>
+                    <h3>Thumbnail</h3>
+                    <img id="thumbnail" src="http://placehold.it/350x197" />
+
+                    <input id="thumbnail-upload" type='file' />
+
+                    <paper-input id="source" label="Source Code" pattern="^(http:\/\/|https:\/\/)?(www.)?([a-zA-Z0-9]+).[a-zA-Z0-9]*.[a-z]{3}.?([a-z]+)?$" auto-validate error-message="Only URLs allowed!"></paper-input>
+                    <paper-input id="license-name" label="License Name (BSD, MIT, etc)" required auto-validate error-message="You need a license!"></paper-input>
+                    <paper-input id="license-url" label="License URL" auto-validate error-message="You need a license URL!"></paper-input>
+                    <div class="vertical-space"></div>
+
+                    <paper-input id="documentation-url" label="Documentation (optional link to .md)" pattern="^(http:\/\/|https:\/\/)?(www.)?([a-zA-Z0-9]+).[a-zA-Z0-9]*.[a-z]{3}.?([a-z]+)?$" auto-validate error-message="Only URLs allowed!"></paper-input>
+                    <paper-textarea id="documentation-text" label="Documentation (markup)" error-message="You need a documentation!"></paper-textarea>
+                    <div class="vertical-space"></div>
+                    <div class="paper-font-heading">File: </div>
+                    <paper-input id="version" label="Version (x.x.x)" required pattern="\d+(?:\.\d+)+" auto-validate error-message="Only version numbers of the format x.x.x!"></paper-input>
+                    <!--<paper-button raised class="colorful2">UPLOAD FILE</paper-button>-->
+                    <div class="vertical-space"></div>
+                    <input id="file-upload" type='file' />
+                    <div class="vertical-space"></div>
+                    <paper-button raised class="colorful" on-click="_submit">SUBMIT</paper-button>
+                    <!--ninja link sinche window.location.href does not work with hashbangs + page.js??-->
+                    <a data-route="catalog" id="ninja-link" class='hidden' href$="{{referToUrl}}"></a>
+                </div>
+            </paper-material>
+        </div>
+    </template>
+
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'sweva-upload',
+                properties: {
+                    isEdit: {
+                        type: Boolean,
+                        value: false
+                    },
+                    categories: {
+                        type: Array,
+                        value: []
+                    },
+                    upload: {
+                        type: Object,
+                        value: {}
+                    },
+                    edit: {
+                        type: Object,
+                        value: {}
+                    },
+                    file: {
+                        type: String,
+                        value: ''
+                    },
+                    uploadString: {
+                        type: String,
+                        value: ''
+                    },
+                    referToUrl: {
+                        type: String,
+                        value: ''
+                    },
+                    category: {
+                        type: String,
+                        value: 'tools'
+                    },
+                    name: {
+                        type: String,
+                        value: ''
+                    },
+                    serviceurl: {
+                        type: String,
+                        value: ''
+                    },
+                    ajaxUploadUrl: {
+                        type: String,
+                        computed: '_computeUploadUrl(serviceurl, category)'
+                    },
+                    ajaxCallUrl: {
+                        type: String,
+                        computed: '_computeUrl(serviceurl, category, name)'
+                    }
+                },
+                init: function () {
+                    this.file = null;
+                    this.querySelector('#edit-get-ajax').generateRequest();
+                },
+                _handleEditGetResponse: function(request) {
+                    if (request.detail.status == 200) {
+                        this.edit = request.detail.response;
+                        
+                        this.querySelector('#title').value = this.edit.title;
+                        this.querySelector('#short-description').value = this.edit['short-description'];
+                        this.querySelector('#description').value = this.edit['description'];
+                        
+
+                        this.querySelector('#tags').value = this.edit.tags.join(', ');
+                        this.querySelector('#thumbnail').src = this.edit.thumbnail;
+                       
+
+                        this.querySelector('#source').value = this.edit.source;
+                        this.querySelector('#license-url').value = this.edit.license.url;
+                        this.querySelector('#license-name').value = this.edit.license.name;
+
+                        this.querySelector('#documentation-url').value = this.edit.documentation.url;
+                        this.querySelector('#documentation-text').value = this.edit.documentation.text;
+                    }
+                },
+                ready: function () {
+
+                    var imageUpload = this.querySelector('#thumbnail-upload');
+                    var self = this;
+                    imageUpload.addEventListener('change', function (event) {
+
+                        if (imageUpload.files && imageUpload.files[0]) {
+
+                            var reader = new FileReader();
+                            reader.onload = function (e) {
+                                self.querySelector('#thumbnail').src = e.target.result
+                                var image = self._imageToDataUri(self.querySelector('#thumbnail'), 350, 197);
+                                self.querySelector('#thumbnail').src = image;
+                                self.upload.thumbnail = image;
+                            }
+                            reader.readAsDataURL(imageUpload.files[0]);
+                        }
+                    });
+                    var fileUpload = this.querySelector('#file-upload');
+                    fileUpload.addEventListener('change', function (event) {
+
+                        if (fileUpload.files && fileUpload.files[0]) {
+
+                            var reader = new FileReader();
+                            reader.onload = function (e) {
+                                self.file = e.target.result;
+
+                            }
+                            reader.readAsText(fileUpload.files[0]);
+                        }
+                    });
+                },
+                _computeUrl: function (serviceurl, category, name) {
+                    return serviceurl + 'catalog/' + category + '/' + name;
+                },
+                _computeUploadUrl: function (serviceurl, category) {
+                    return serviceurl + 'catalog/' + category;
+                },
+                //https://stackoverflow.com/questions/20958078/resize-base64-image-in-javascript-without-using-canvas
+                _imageToDataUri: function (img, width, height) {
+
+                    // create an off-screen canvas
+                    var canvas = document.createElement('canvas'),
+                        ctx = canvas.getContext('2d');
+
+                    // set its dimension to target size
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // draw source image into the off-screen canvas:
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // encode image to data-uri with base64 version of compressed image
+                    return canvas.toDataURL();
+                },
+                _submit: function (e) {
+
+                    if(this.isEdit){
+                        if (this.querySelector('#title').value != this.edit.title) {
+                            this.upload.title = this.querySelector('#title').value;
+                        }
+                        if (this.querySelector('#short-description').value != this.edit['short-description']) {
+                            this.upload['short-description'] = this.querySelector('#short-description').value;
+                        }
+                        if (this.querySelector('#description').value != this.edit.description) {
+                            this.upload.description = this.querySelector('#description').value;
+                        }
+
+                        if (this.querySelector('#tags').value != this.edit.tags.join(', ')) {
+                            
+                            this.upload.tags = [];
+                          
+                            var tags = this.querySelector('#tags').value.split(',');
+                            for (var i = 0; i < tags.length; i++) {
+                                if (tags[i].trim().length > 0) {
+                                    this.upload.tags.push(tags[i]);
+                                }
+                            }
+                            
+                        }
+                        if (this.querySelector('#source').value != this.edit.source) {
+                            this.upload.source = this.querySelector('#source').value;
+                        }
+                        if (this.querySelector('#license-url').value != this.edit.license.url
+                            || this.querySelector('#license-name').value != this.edit.license.name) {
+                            this.upload.license.url = this.querySelector('#license-url').value;
+                            this.upload.license.name = this.querySelector('#license-name').value;
+                        }
+
+                        if (this.querySelector('#documentation-url').value != this.edit.documentation.url
+                            || this.querySelector('#documentation-text').value != this.edit.documentation.text) {
+                            this.upload.documentation.url = this.querySelector('#documentation-url').value;
+                            this.upload.documentation.text = this.querySelector('#documentation-text').value;
+                        }
+                        if (this.querySelector('#thumbnail').src != this.edit.thumbnail) {
+                            this.upload.thumbnail = this.querySelector('#thumbnail').src;
+                        }
+                        var version = this.querySelector('#version').value;
+                        if (version) {
+                            version = version.replace(/\./g, '-');
+                        }
+                      
+                        if (this.file) {
+                            this.upload.files = {};
+                            try {
+                                this.upload.files[version] = JSON.parse(this.file);
+                            } catch (e) {
+                                console.log(e);
+                                this.upload.files[version] = this.file;
+                            }
+                        }
+                        
+                        this.upload.author = {
+                            "id": "234635731",
+                            "name": "John Doe",
+                            "email": "alexander.ruppert@rwth-aachen.de"
+                        };
+
+                        this.uploadString = JSON.stringify(this.upload);
+                        console.log(this.upload);
+                        this.querySelector('#edit-put-ajax').generateRequest();
+                    }
+                    else {
+                        var selectedCategory = this.querySelector('#category').selected;
+                        this.upload.category = this.categories[selectedCategory].name;
+                        this.category = this.categories[selectedCategory].name;
+                        this.upload.name = this.querySelector('#name').value;
+                        this.name = this.upload.name;
+
+
+
+                        this.upload.title = this.querySelector('#title').value;
+                        this.upload['short-description'] = this.querySelector('#short-description').value;
+                        this.upload.description = this.querySelector('#description').value;
+                        this.upload.tags = [];
+
+                        if (this.querySelector('#tags').value) {
+                            var tags = this.querySelector('#tags').value.split(',');
+                            for (var i = 0; i < tags.length; i++) {
+                                if (tags[i].trim().length > 0) {
+                                    this.upload.tags.push(tags[i]);
+                                }
+                            }
+                        }
+
+                        this.upload.source = this.querySelector('#source').value;
+                        this.upload.license = {};
+                        this.upload.license.url = this.querySelector('#license-url').value;
+                        this.upload.license.name = this.querySelector('#license-name').value;
+
+                        this.upload.documentation = {};
+                        this.upload.documentation.url = this.querySelector('#documentation-url').value;
+                        this.upload.documentation.text = this.querySelector('#documentation-text').value;
+
+                        var version = this.querySelector('#version').value;
+                        if (version) {
+                            version = version.replace(/\./g, '-');
+                        }
+
+                        this.upload.files = {};
+                        try {
+                            this.upload.files[version] = JSON.parse(this.file);
+                        } catch (e) {
+                            this.upload.files[version] = this.file;
+                        }
+                        this.upload.author = {
+                            "id": "234635731",
+                            "name": "John Doe",
+                            "email": "alexander.ruppert@rwth-aachen.de"
+                        };
+                        this.uploadString = JSON.stringify(this.upload);
+                        this.querySelector('#upload-post-ajax').generateRequest();
+                    }
+                   
+
+                    
+                    
+                },
+                _handleUploadPostResponse: function (request) {
+                    if (request.detail.status == 201 || request.detail.status == 200) {
+                        var self = this;
+                        this.querySelector('#uploaded-dialog').open();
+
+                        //navigate to newly created entry
+                        window.setTimeout(function () {
+                            self.querySelector('#uploaded-dialog').close();
+                            self.referToUrl = '/catalog/' + self.category + '/' + self.name;
+                            self.querySelector('#ninja-link').click();
+                        }, 1000);
+
+                    }
+                    
+                }
+
+            });
+        })();
+    </script>
+</dom-module>

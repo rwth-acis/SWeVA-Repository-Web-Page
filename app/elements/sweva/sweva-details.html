@@ -1,0 +1,561 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../../bower_components/paper-material/paper-material.html">
+<link rel="import" href="../../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../../bower_components/paper-tabs/paper-tab.html">
+<link rel="import" href="../../bower_components/paper-input/paper-textarea.html">
+<link rel="import" href="../../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="../../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../../bower_components/iron-collapse/iron-collapse.html">
+<link rel="import" href="../../bower_components/marked-element/marked-element.html">
+<link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+
+<link rel="import" href="../star-rating/star-rating.html">
+<link rel="import" href="../user-gravatar/user-gravatar.html">
+<link rel="import" href="../link-share-dialog/link-share-dialog.html">
+<link rel="import" href="../collapsable-card/collapsable-card.html">
+
+<dom-module id="sweva-details">
+    <template>
+        <style>
+            #details-container {
+                padding: 30px;
+            }
+
+            paper-material {
+                border-radius: 2px;
+                height: 100%;
+                padding: 16px 0 16px 0;
+                width: calc(98.66% - 16px);
+                margin: 16px auto;
+                background: white;
+            }
+
+            #details-container .overview-card {
+                width: 100%;
+                flex: 1 1 auto;
+                margin-bottom: 20px;
+                margin-left: 10px;
+                margin-right: 10px;
+                position: relative;
+            }
+
+            #details-container #add-button {
+                position: absolute;
+                right: 45px;
+                bottom: 24px;
+                z-index: 1;
+            }
+
+            #details-container .overview-card paper-button {
+                font-weight: 500;
+                color: var(--accent-color);
+            }
+
+            #details-container .card-content {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            #details-container .image-container {
+                margin-bottom: 20px;
+            }
+
+            #details-container .text-container {
+                padding-left: 22px;
+                padding-right: 22px;
+                flex: 1 1;
+                min-width: 200px;
+                margin-bottom: 20px;
+            }
+
+            #card-container .stats-container {
+                padding-left: 40px;
+                padding-right: 20px;
+            }
+
+            .comment .header {
+                border-bottom: 1px solid #E0E0E0;
+                height: 35px;
+                display: flex;
+            }
+
+                .comment .header .user {
+                    flex: 1 1;
+                }
+
+                    .comment .header .user > * {
+                        float: left;
+                        margin-right: 10px;
+                    }
+
+            .comment paper-button {
+                font-weight: 500;
+                color: var(--accent-color);
+                margin-top: -10px;
+            }
+
+            .flex-container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+
+            .flex-container-nowrap {
+                display: flex;
+            }
+
+            .flex {
+                flex: 1 1;
+            }
+
+            a {
+                text-decoration: none;
+                color: var(--accent-color);
+                font-weight: 500;
+            }
+
+            dl {
+                float: left;
+                margin-left: 20px;
+                margin-right: 20px;
+                max-width: 500px;
+                overflow: hidden;
+            }
+
+                dl dt {
+                    font-weight: 500;
+                    letter-spacing: -.05em;
+                }
+
+                dl dd {
+                    padding-top: 5px;
+                    padding-bottom: 5px;
+                    font-size: smaller;
+                }
+
+                    dl dd user-gravatar {
+                        float: left;
+                        margin-right: 10px;
+                    }
+
+                    dl dd .user-name {
+                        float: left;
+                    }
+
+            paper-dialog {
+                background: #fff;
+            }
+
+            #rating-box {
+                display: block;
+            }
+
+            .horizontal-spacer {
+                display: inline-block;
+                width: 50px;
+            }
+
+            @media (max-width: 600px) {
+                paper-material {
+                    --menu-container-display: none;
+                    width: calc(97.33% - 32px);
+                    padding-left: 16px;
+                    padding-right: 16px;
+                }
+            }
+
+            @media (min-width: 601px) {
+
+                paper-material {
+                    width: calc(98% - 46px);
+                    margin-bottom: 32px;
+                    padding-left: 30px;
+                    padding-right: 30px;
+                }
+            }
+        </style>
+
+        <iron-ajax id="detail-get-ajax"
+                   url="{{ajaxCallUrl}}"
+                   handle-as="json"
+                   on-response="_handleResponse"
+                   debounce-duration="300"></iron-ajax>
+
+        <iron-ajax id="documentation-ajax"
+                   url="{{ajaxGetLinkedDocumentationUrl}}"
+                   handle-as="text"
+                   on-response="_handleDocumentationResponse"
+                   debounce-duration="100"></iron-ajax>
+        <iron-ajax id="rating-ajax"
+                   url="{{ajaxRatingUrl}}"
+                   handle-as="json"
+                   method="PUT"
+                   on-response="_handleRatingResponse"
+                   debounce-duration="300"></iron-ajax>
+
+        <iron-ajax id="comments-get-ajax"
+                   auto
+                   url="{{ajaxCommentsUrl}}"
+                   handle-as="json"
+                   on-response="_handleCommentsResponse"
+                   debounce-duration="300"></iron-ajax>
+
+        <iron-ajax id="comment-post-ajax"
+                   url="{{ajaxCommentsUrl}}"
+                   handle-as="text"
+                   content-type="application/json"
+                   method="POST"
+                   body="{{writtenComment}}"
+                   on-response="_handleCommentPostResponse"
+                   debounce-duration="300"></iron-ajax>
+        <iron-ajax id="comment-edit-ajax"
+                   url="{{ajaxEditedCommentsUrl}}"
+                   handle-as="text"
+                   content-type="application/json"
+                   method="PUT"
+                   body="{{editedComment}}"
+                   on-response="_handleCommentEditResponse"
+                   debounce-duration="300"></iron-ajax>
+       
+
+        <paper-dialog id="rated-dialog">
+            <h2>Successfully rated!</h2>
+            <div class="buttons">
+                <paper-button dialog-confirm autofocus>OK</paper-button>
+            </div>
+        </paper-dialog>
+
+        <paper-dialog id="comment-posted-dialog">
+            <h2>Comment posted!</h2>
+            <div class="buttons">
+                <paper-button dialog-confirm autofocus>OK</paper-button>
+            </div>
+        </paper-dialog>
+
+        <link-share-dialog id="get-link-dialog" title="{{itemObject.name}}">
+        </link-share-dialog>
+        <link-share-dialog id="share-link-dialog" title="{{itemObject.title}}">
+        </link-share-dialog>
+
+        <div id="details-container">
+
+            <paper-card class="overview-card" heading$="{{itemObject.title}}">
+                <div class="card-content flexbox">
+                    <div class="image-container">
+                        <image src$="{{itemObject.thumbnail}}" />
+                    </div>
+                    <div class="text-container">
+                        <span>{{itemObject.description}}</span>
+                    </div>
+                </div>
+                <paper-fab id="add-button" icon="icons:add" on-tap="_handleGetRawLink"></paper-fab>
+                <div class="card-actions">
+                    <a href$="{{itemObject.source}}" target="_blank"><paper-button>VIEW SOURCE</paper-button></a>
+                    <paper-button on-tap="_handleShareDialog">SHARE</paper-button>
+                    <a href$="{{_getEditUrl(category, name)}}"<paper-button>EDIT</paper-button></a>
+                </div>
+            </paper-card>
+            <paper-card class="overview-card" heading="Details">
+                <div class="card-content flexbox">
+                    <div class="text-container flex-container">
+                        <dl>
+                            <dt>Author</dt>
+                            <dd><user-gravatar email="{{itemObject.author.email}}"></user-gravatar> <div class="user-name"><span>{{itemObject.author.name}}</span></div></dd>
+                        </dl>
+                        <dl>
+                            <dt>Rating</dt>
+                            <dd><star-rating rating="{{itemObject.rating}}" readonly="true"></star-rating></dd>
+                        </dl>
+                        <dl>
+                            <dt>Source Code</dt>
+                            <dd><a href="{{itemObject.source}}" target="_blank">{{itemObject.source}}</a></dd>
+                        </dl>
+                        <dl>
+                            <dt>License</dt>
+                            <dd><a href$="{{itemObject.license.url}}" target="_blank">{{itemObject.license.name}}</a></dd>
+                        </dl>
+                        <dl>
+                            <dt>Tags</dt>
+                            <dd>
+                                <template is="dom-repeat" items="{{itemObject.tags}}">
+                                    <span>{{item}}</span>
+                                </template>
+                            </dd>
+                        </dl>
+                        
+                    </div>
+                    
+                </div>
+            </paper-card>
+
+            <collapsable-card title="Documentation">
+
+                <marked-element markdown="{{markdown}}">
+                    <div class="markdown-html"></div>
+                </marked-element>
+            </collapsable-card>
+
+            <collapsable-card title="Demo">
+                Tincidunt integer eu augue augue nunc elit dolor, luctus placerat scelerisque euismod, iaculis eu lacus nunc mi elit, vehicula ut laoreet ac, aliquam sit amet justo nunc tempor, metus vel.
+                Laoreet ac, aliquam sit amet justo nunc tempor, metus vel placerat suscipit, orci nisl iaculis eros, a tincidunt nisi odio eget lorem nulla condimentum tempor mattis ut vitae feugiat augue cras ut metus a risus iaculis scelerisque eu ac ante fusce non varius purus aenean nec magna felis fusce vestibulum.
+            </collapsable-card>
+
+            <collapsable-card title="Comments">
+                <paper-material elevation="4">
+                    <div id="rating-box">
+                        <span class="paper-font-headline">Rate with Stars:</span><span class="horizontal-spacer"></span>
+                        <star-rating rating="0" on-rated="_handleRated"></star-rating>
+                    </div>
+                    <div class="flex-container">
+                        <paper-textarea id="comment-text" class="flex" label="Your comment"></paper-textarea>
+                        <paper-fab icon="icons:send" on-tap="_handleCommentSend"></paper-fab>
+                    </div>
+                </paper-material>
+                <template is="dom-repeat" items="{{comments}}">
+                    <paper-material class="comment" elevation="2">
+                        <div class="header">
+                            <div class="user">
+                                <user-gravatar email="{{item.author.email}}"></user-gravatar>
+                                <div>
+                                    <span class="paper-font-title">{{item.author.name}}</span>
+                                </div>
+                            </div>
+                            <div class="time paper-font-caption">
+                                <span>{{_timestampToDate(item.created)}}</span>
+                            </div>
+                            <paper-button hidden="{{_commentUnderEdit(item.id, currentlyEditedComment)}}" data-target$="{{item.id}}" on-click="_editComment">
+                                EDIT
+                            </paper-button>
+                            <paper-button hidden="{{!_commentUnderEdit(item.id, currentlyEditedComment)}}" data-target$="{{item.id}}" on-click="_sendEditedComment">
+                                SEND
+                            </paper-button>
+                        </div>
+                        <div class="content">
+                            <template is="dom-if" if="{{!_commentUnderEdit(item.id, currentlyEditedComment)}}">
+                                <p>{{item.comment}}</p>
+                            </template>
+                            <template is="dom-if" if="{{_commentUnderEdit(item.id, currentlyEditedComment)}}">
+                                <paper-textarea id$="{{_formatId(item.id)}}" class="flex" label="Your comment" value="{{item.comment}}"></paper-textarea>
+                            </template>
+                        </div>
+                    </paper-material>
+                </template>
+            </collapsable-card>
+        </div>
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'sweva-details',
+                properties: {
+                    name: {
+                        type: String,
+                        value: 'super-tool'
+                    },
+                    category: {
+                        type: String,
+                        value: 'tools'
+                    },
+                    serviceurl: {
+                        type: String,
+                        value: ''
+                    },
+                    currentRating: {
+                        type: String,
+                        value: '3'
+                    },
+                    currentlyEditedComment: {
+                        type: String,
+                        value: ''
+                    },
+                    comments: {
+                        type: Array,
+                        value: []
+                    },
+                    itemObject: {
+                        type: Object,
+                        value: {}
+                    },
+                    documentation: {
+                        type: String,
+                        value: 'a'
+                    },
+                    writtenComment: {
+                        type: String,
+                        value: ''
+                    },
+                    editedComment: {
+                        type: String,
+                        value: ''
+                    },
+                    markdown: {
+                        type: String,
+                        value: 'a'
+                    },
+                    documentationUrl: {
+                        type: String,
+                        value: ''
+                    },
+                    ajaxCallUrl: {
+                        type: String,
+                        computed: '_computeUrl(serviceurl, category, name)'
+                    },
+                    ajaxGetLinkedDocumentationUrl: {
+                        type: String,
+                        computed: '_computeDocumentUrl(documentationUrl)'
+                    },
+                    ajaxRatingUrl: {
+                        type: String,
+                        computed: '_computeRatingUrl(currentRating)'
+                    },
+                    ajaxCommentsUrl: {
+                        type: String,
+                        computed: '_computeCommentsUrl(serviceurl, category, name)'
+                    },
+                    ajaxEditedCommentsUrl: {
+                        type: String,
+                        computed: '_computeEditedCommentsUrl(currentlyEditedComment)'
+                    }
+
+                },
+
+                init: function() {
+                    this.querySelector('#detail-get-ajax').generateRequest();
+                },
+                ready: function () {
+
+                },
+
+                //initial load
+                _computeUrl: function (serviceurl, category, name) {
+                    return serviceurl + 'catalog/' + category + '/' + name;
+                },
+                _handleResponse: function (request) {
+                    this.itemObject = request.detail.response;
+                    this.markdown = this.itemObject.documentation.text;
+                    this.documentationUrl = this.itemObject.documentation.url;
+
+                    if (this.documentationUrl && this.documentationUrl.length > 2) {
+                        this.querySelector('#documentation-ajax').generateRequest();
+                    }
+                },
+
+                //load documentation
+                _computeDocumentUrl: function (documentationUrl) {
+                    return documentationUrl;
+                },
+                _handleDocumentationResponse: function (request) {
+                    if (request.detail.status == 200) {
+                        var response = request.detail.response;
+                        if (response) {
+                            this.markdown = response;
+                        }
+                    }
+                },
+                //rating
+                _computeRatingUrl: function (currentRating) {
+                    return this.serviceurl + 'catalog/' + this.category + '/' + this.name + '/rating/' + currentRating;
+                },
+                _handleRated: function (e) {
+                    var rating = e.detail.rating;
+                    this.currentRating = rating;
+                    this.querySelector('#rating-ajax').generateRequest();
+                },
+                _handleRatingResponse: function (request) {
+                    if (request.detail.status == 200) {
+                        this.querySelector('#rated-dialog').open();
+                    }
+                },
+
+                //comments
+                _computeCommentsUrl: function (serviceurl, category, name) {
+                    return serviceurl + 'catalog/' + category + '/' + name + '/comments';
+                },
+                _computeEditedCommentsUrl: function (currentlyEditedComment) {
+                    return this._computeCommentsUrl(this.serviceurl, this.category, this.name) + '/' + currentlyEditedComment;
+                },
+                _handleCommentPostResponse: function (request) {
+                    if (request.detail.status == 201) {
+                        this.querySelector('#comment-posted-dialog').open();
+                    }
+                },
+                _handleCommentSend: function (e) {
+                    var commentText = this.querySelector('#comment-text').value;
+
+                    this.writtenComment = JSON.stringify({ author: { name: "Batman", id: "654", email: "asd@dsa.com" }, comment: commentText });
+                    this.querySelector('#comment-post-ajax').generateRequest();
+                    var self = this;
+                    window.setTimeout(function () { self.querySelector('#comments-get-ajax').generateRequest(); }, 1000);
+                },
+
+                _handleCommentsResponse: function (request) {
+                    this.comments = request.detail.response.comments;
+                },
+                _handleCommentEditResponse: function (request) {
+                    if (request.detail.status == 200) {
+                        this.querySelector('#comment-posted-dialog').open();
+                    }
+                },
+                _commentUnderEdit: function(currentId, editedId){
+                    return currentId == editedId;
+                },
+                _editComment: function (e) {
+                    var cur = e.target;
+                    while (cur.parentNode && cur.dataset && cur.tagName != 'PAPER-BUTTON') {
+                        cur = cur.parentNode;
+                    }
+
+                    var commentId = cur.dataset.target;
+                    if (commentId) {
+                        this.currentlyEditedComment = commentId;
+                    }
+                },
+                _sendEditedComment: function (e) {
+                    var cur = e.target;
+                    while (cur.parentNode && cur.dataset && cur.tagName != 'PAPER-BUTTON') {
+                        cur = cur.parentNode;
+                    }
+
+                    var commentId = cur.dataset.target;
+
+                    if (commentId) {
+                        var commentText = this.querySelector('#' + this._formatId(commentId)).value;
+                       
+                        this.editedComment = JSON.stringify({ author: { name: "Batman", id: "654", email: "asd@dsa.com" }, comment: commentText });
+                        this.querySelector('#comment-edit-ajax').generateRequest();
+                        this.currentlyEditedComment = '';
+                    }
+                },
+                //other
+                _formatId: function(text) {
+                    return 'id'+text.replace(/-/g, '');
+                },
+                _timestampToDate: function (timestamp) {
+                    var d = new Date(+timestamp);
+                    return d.toLocaleString();
+                },
+                _getEditUrl: function(category, name){
+                    return 'catalog/' + category + '/' + name+'/edit'
+                },
+                _handleShareDialog: function (e) {
+                    
+                    var dialog = this.querySelector('#share-link-dialog');
+                    this.itemObject.url = window.location;
+                    dialog.open(this.itemObject.url);
+                },
+                _handleGetRawLink: function (e) {
+                    var dialog = this.querySelector('#get-link-dialog');
+                    this.itemObject.rawUrl = this.serviceurl + 'raw/' + this.category + '/' + this.name;
+                    dialog.open(this.itemObject.rawUrl);
+
+                },
+            });
+        })();
+    </script>
+</dom-module>

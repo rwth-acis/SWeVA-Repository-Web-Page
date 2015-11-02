@@ -1,0 +1,288 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../../bower_components/paper-tabs/paper-tab.html">
+<link rel="import" href="../../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="../../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+
+<link rel="import" href="../star-rating/star-rating.html">
+<link rel="import" href="../link-share-dialog/link-share-dialog.html">
+
+<dom-module id="sweva-catalog">
+    <template>
+        <style>
+            :host {
+                display: block;
+            }
+
+            #tabs {
+                background-color: var(--dark-primary-color);
+                color: #fff;
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+                --paper-tabs-selection-bar-color: var(--accent-color);
+            }
+
+            #card-container {
+                padding: 30px;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+                #card-container .overview-card {
+                    width: 100%;
+                    flex: 1 1 auto;
+                    margin-bottom: 20px;
+                    margin-left: 10px;
+                    margin-right: 10px;
+                    position: relative;
+                }
+
+                #card-container paper-fab {
+                    position: absolute;
+                    right: 45px;
+                    bottom: 24px;
+                    z-index: 1;
+                }
+
+                #card-container .overview-card paper-button {
+                    font-weight: 500;
+                    color: var(--accent-color);
+                }
+
+                    #card-container .overview-card paper-button[raised].colorful {
+                        background: var(--accent-color);
+                        color: var(--text-primary-color);
+                    }
+
+                #card-container .card-content {
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+
+                #card-container .image-container {
+                    margin-bottom: 20px;
+                }
+
+                #card-container .text-container {
+                    padding-left: 22px;
+                    padding-right: 22px;
+                    flex: 1 1;
+                    min-width: 200px;
+                    margin-bottom: 50px;
+                    position: relative;
+                }
+
+                    #card-container .text-container .tags-container {
+                        position: absolute;
+                        bottom: -50px;
+                        height: 50px;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        left: 10px;
+                        right: 10px;
+                    }
+
+                        #card-container .text-container .tags-container iron-icon {
+                            width: 15px;
+                        }
+
+                #card-container .stats-container {
+                    padding-left: 40px;
+                    padding-right: 20px;
+                }
+
+            .text-right {
+                text-align: right;
+            }
+
+            .vertical-spacer {
+                display: block;
+                height: 10px;
+            }
+        </style>
+
+        <iron-ajax auto
+                   url="{{ajaxCallUrl}}"
+                   handle-as="json"
+                   params="{{ajaxCallParameters}}"
+                   on-response="_handleResponse"
+                   debounce-duration="300"></iron-ajax>
+
+        <link-share-dialog id="get-link-dialog" title="{{itemToLink.name}}">
+        </link-share-dialog>
+        <link-share-dialog id="share-link-dialog" title="{{itemToLink.title}}">
+        </link-share-dialog>
+
+        <paper-tabs id="tabs" selected="{{selectedSorting}}" noink>
+            <template is="dom-repeat" items="{{sortings}}">
+                <paper-tab>{{item.title}}</paper-tab>
+            </template>
+        </paper-tabs>
+
+        <div id="card-container">
+            <template is="dom-repeat" items="{{items}}">
+                <paper-card class="overview-card" heading="{{item.title}}">
+                    <div class="card-content flexbox">
+                        <div class="image-container">
+                            <a data-route="details" href="{{_getItemUrl(item.name)}}"><image src="{{item.thumbnail}}" /></a>
+                        </div>
+                        <div class="text-container">
+                            <span>{{item.short-description}}</span>
+                            <div class="tags-container">
+                                <iron-icon icon="icons:loyalty"></iron-icon>
+                                <span class="paper-font-body1"><b>Tags: </b></span>
+                                <template is="dom-repeat" items="{{item.tags}}" as="tag" index-as="tagIndex">
+                                    <span class="paper-font-caption">{{tag}}</span>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="stats-container">
+                            <div class="paper-font-button">RATING</div>
+                            <star-rating rating$="{{item.rating}}" readonly="true"></star-rating>
+                            <span class="vertical-spacer"></span>
+                            <div class="paper-font-button">MODIFIED</div>
+                            <div><span>{{_timestampToDate(item.modified)}}</span></div>
+                            <span class="vertical-spacer"></span>
+                            <div class="paper-font-button">ADDED</div>
+                            <div><span>{{_timestampToDate(item.created)}}</span></div>
+                            <span class="vertical-spacer"></span>
+                        </div>
+                    </div>
+                    <paper-fab icon="icons:add" on-tap="_handleGetRawLink" data-itemindex$="{{index}}"></paper-fab>
+                    <div class="card-actions">
+                        <a data-route="details" href="{{_getItemUrl(item.name)}}"><paper-button raised class="colorful">VIEW DETAILS</paper-button></a>
+                        <paper-button on-tap="_handleShareDialog" data-itemindex$="{{index}}">SHARE</paper-button>
+                    </div>
+                </paper-card>
+            </template>
+        </div>
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'sweva-catalog',
+                properties: {
+                    items: {
+                        type: Array,
+                        value: []
+                    },
+                    category: {
+                        type: String,
+                        value: 'tools'
+                    },
+                    serviceurl: {
+                        type: String,
+                        value: ''
+                    },
+
+                    itemToLink: {
+                        type: Object,
+                        value: {
+                            rawUrl: "ad"
+                        }
+                    },
+                    search: {
+                        type: String,
+                        value: ''
+                    },
+                    sortings: {
+                        type: Array,
+                        value: [
+                            {
+                                title: 'Best rated',
+                                parameter: 'rating'
+                            },
+                            {
+                                title: 'Newest',
+                                parameter: 'age'
+                            },
+                        ],
+                        readOnly: true
+                    },
+                    selectedSorting: {
+                        type: Number,
+                        value: 0,
+                        observer: '_tabChanged'
+                    },
+
+                    ajaxCallParameters: {
+                        type: String,
+                        computed: '_computeURLParameters(search, selectedSorting)'
+                    },
+                    ajaxCallUrl: {
+                        type: String,
+                        computed: '_computeURL(serviceurl, category)'
+                    }
+                },
+                _getItemUrl: function (itemName) {
+                    return 'catalog/' + this.category + '/' + itemName;
+                },
+                _computeURL: function (serviceurl, category) {
+
+                    return serviceurl + 'catalog/' + category;
+                },
+                _computeURLParameters: function (search, selectedSorting) {
+                    return { 'search': search, 'sort': this.sortings[selectedSorting].parameter };
+                },
+                _tabChanged: function () {
+
+                },
+                _isLastElement: function (index, size) {
+                    return index >= size - 1;
+                },
+                _timestampToDate: function (timestamp) {
+
+                    var d = new Date(+timestamp);
+
+                    return d.toLocaleDateString();
+                },
+                _handleResponse: function (request) {
+
+                    this.items = request.detail.response;
+                },
+                _handleShareDialog: function (e) {
+                    var dialog = this.querySelector('#share-link-dialog');
+                    var cur = e.target;
+                    while (cur.parentNode && cur.tagName != 'PAPER-BUTTON') {
+                        cur = cur.parentNode;
+                    }
+                    var itemIndex = cur.dataset.itemindex;
+                    this.itemToLink = this.items[itemIndex];
+                    var url = window.location+'';
+                    this.itemToLink.url = url + "/" + this.itemToLink.name;
+
+                    dialog.open(this.itemToLink.url);
+
+                },
+                _handleGetRawLink: function (e) {
+                    var dialog = this.querySelector('#get-link-dialog');
+
+                    //need to get the paper-fab and not the nested elements >:(
+                    var cur = e.target;
+                    while (cur.parentNode && cur.tagName != 'PAPER-FAB') {
+                        cur = cur.parentNode;
+
+                    }
+
+                    var itemIndex = cur.dataset.itemindex;
+                    var itemToLink = this.items[itemIndex];
+                    this.itemToLink.rawUrl = this.serviceurl + "raw/" + this.category + "/" + this.itemToLink.name;
+
+                    var input = dialog.getElementsByTagName('paper-input')[0];
+                    dialog.open(this.itemToLink.rawUrl);
+
+                },
+                ready: function () {
+
+                }
+            });
+        })();
+    </script>
+</dom-module>

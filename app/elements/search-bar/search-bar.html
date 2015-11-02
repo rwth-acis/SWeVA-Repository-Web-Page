@@ -1,0 +1,164 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../../bower_components/iron-input/iron-input.html">
+<!--https://stackoverflow.com/questions/29463855/polymer-search-input-text-from-icon-->
+
+<dom-module id="search-bar">
+    <template>
+        <style>
+            :host {
+                flex: 1 1;
+            }
+
+            #search {
+                display: -webkit-box;
+                display: -webkit-flex;
+                display: -moz-flex;
+                display: -ms-flexbox;
+                display: -o-flex;
+                display: flex;
+                align-items: center;
+                flex: 0 0 auto;
+                width: 100%;
+                -moz-box-sizing: border-box;
+                -webkit-box-sizing: border-box;
+                box-sizing: border-box;
+                background-color: inherit;
+            }
+
+            #search-button {
+            }
+
+            #content {
+                overflow: hidden;
+                white-space: nowrap;
+                flex: 1 1 100%;
+                transition: flex 0.3s ease-out;
+            }
+
+            #search[show] #content {
+                width: 0;
+                flex: 0 1 0%;
+                transition: flex 0.3s ease-out;
+            }
+
+            #search[show] #input {
+                padding: 10px;
+                visibility: visible;
+            }
+
+            #search[show] #search-cancel {
+                display: block;
+            }
+
+            #search-cancel {
+                display: none;
+            }
+
+            #input {
+                background-color: inherit;
+                border: none;
+                font-size: 20px;
+                outline: none;
+                padding: 0;
+                color: inherit;
+                -webkit-box-flex: 1;
+                -webkit-flex: 1 0 0;
+                -moz-flex: 1 0 0;
+                -ms-flex: 1 0 0;
+                -o-flex: 1 0 0;
+                flex: 1 0 0;
+                visibility: hidden;
+                -webkit-appearance: none;
+            }
+
+                #input::-webkit-search-cancel-button {
+                    -webkit-appearance: none;
+                }
+
+                #input::-webkit-input-placeholder {
+                    color: var(--text-primary-color);
+                    opacity: 0.65;
+                }
+
+                #input:-moz-placeholder { /* Firefox 18- */
+                    color: var(--text-primary-color);
+                    opacity: 0.65;
+                }
+
+                #input::-moz-placeholder { /* Firefox 19+ */
+                    color: var(--text-primary-color);
+                    opacity: 0.65;
+                }
+
+                #input:-ms-input-placeholder {
+                    color: var(--text-primary-color);
+                    opacity: 0.65;
+                }
+        </style>
+
+        <div id="search" show$="{{show}}">
+
+            <div id="content">
+                <content>
+                </content>
+            </div>
+            <paper-icon-button id="search-button" icon="icons:search" on-click="toggleSearch"></paper-icon-button>
+            <input is="iron-input" bind-value="{{searchInput}}" type="search" id="input" on-keyup="onKeyPress" autocomplete="off" placeholder="Search">
+            <paper-icon-button id="search-cancel" icon="icons:clear" on-click="toggleSearch"></paper-icon-button>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: 'search-bar',
+
+            properties: {
+                show: {
+                    type: Boolean,
+                    value: false
+                },
+                searchInput: {
+                    type: String,
+                    value: ''
+                }
+            },
+
+            toggleSearch: function (e) {
+                if (e) { // comes first
+                    e.stopPropagation();
+                    if (e.target === this.$.input) {
+                        return;
+                    }
+                }
+               
+                this.show = !this.show;
+
+                if (!this.show) {
+                    this.searchInput = '';
+                }
+
+                this.async(function () {
+                    this.$.input.focus();
+                });
+            },
+
+            onKeyPress: function (e) {
+                if (e.keyCode == 27) { //ESC
+                    this.toggleSearch();
+                }
+                else {
+                    this.fire('search', { search: this.searchInput })
+                }
+
+                /*if (e.keyCode == 13) { // Enter
+                    var q = this.searchInput;
+                    //q = 'site:mysite.com+' + q; // edit site here
+                    window.open('https://www.google.com/search?q=' + q);
+                    this.show = false;
+                    this.searchInput = '';
+                }*/
+
+            }
+        });
+    </script>
+</dom-module>

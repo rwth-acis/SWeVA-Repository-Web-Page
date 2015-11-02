@@ -1,0 +1,97 @@
+﻿<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../../bower_components/paper-ripple/paper-ripple.html">
+<dom-module id="star-rating">
+    <template>
+        <style>
+            .active {
+                color: var(--accent-color);
+                z-index: 2;
+            }
+
+            .non-active {
+                opacity: 0.35;
+                z-index: 2;
+            }
+
+            .ripple-area {
+                display: inline-block;
+                overflow: hidden;
+                position: relative;
+            }
+
+            paper-ripple {
+                color: var(--accent-color);
+            }
+        </style>
+        <div class="ripple-area">
+            <template is="dom-repeat" items="{{starSet}}">
+                <iron-icon class$="{{item}}" data-index$="{{index}}" icon="{{icon}}" on-tap="_rate"></iron-icon>
+            </template>
+            <template is="dom-if" if="{{!readonly}}">
+                <paper-ripple class="circle" recenters></paper-ripple>
+            </template>
+        </div>
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'star-rating',
+                properties: {
+
+                    icon: {
+                        type: String,
+                        value: 'icons:star'
+                    },
+                    rating: {
+                        type: Number,
+                        value: 1,
+                        observer: 'ready'
+
+                    },
+                    stars: {
+                        type: Number,
+                        value: 5
+                    },
+                    starSet: {
+                        type: Array,
+                        notify: true
+                    },
+                    readonly: {
+                        type: Boolean,
+                        value: false,
+                        notify: true
+                    }
+
+                },
+                ready: function () {
+
+                    var items = [];
+                    for (var i = 1; i <= this.stars; i++) {
+                        items.push((this.rating >= i) ? 'active' : 'non-active');
+                    }
+                    this.starSet = items;
+                },
+                _rate: function (e) {
+
+                    if (this.readonly)
+                        return;
+
+                    if (e) {
+                        e.stopPropagation();
+                    }
+                    var rating = +e.target.dataset.index + 1;
+                    if (this.rating != rating) {
+                        this.rating = rating;
+                        this.ready();
+                        this.fire('rated', { rating: rating });
+                    }
+                }
+
+            });
+        })();
+    </script>
+</dom-module>
